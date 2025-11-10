@@ -215,58 +215,41 @@ const Avatar = () => {
 
     console.log('Keyboard controls enabled: WASD to move, Z/X to zoom');
 
-    // Lighting - Dramatic with spotlight on avatar
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Lower for darker corners
+    // Lighting - Simple and bright focused on character
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Higher ambient
     scene.add(ambientLight);
     
-    // Spotlight focused on avatar (main light)
-    const spotlight = new THREE.SpotLight(0xffffff, 3.0); // Bright spotlight
-    spotlight.position.set(100, 300, 200);
-    spotlight.angle = Math.PI / 6; // Focused beam
-    spotlight.penumbra = 0.3; // Soft edge
-    spotlight.decay = 2;
-    spotlight.distance = 1000;
-    spotlight.target.position.set(0, 100, 0); // Aim at avatar center
-    spotlight.castShadow = true;
+    // Main spotlight from above-front - bright on character
+    const mainLight = new THREE.SpotLight(0xffffff, 4.0); // Very bright
+    mainLight.position.set(0, 400, 150); // Above and slightly in front
+    mainLight.angle = Math.PI / 5;
+    mainLight.penumbra = 0.2; // Soft edge
+    mainLight.decay = 1.5;
+    mainLight.distance = 1000;
+    mainLight.target.position.set(0, 100, 0); // Aim at avatar center
+    mainLight.castShadow = true;
     
-    // Shadow settings
-    spotlight.shadow.camera.near = 50;
-    spotlight.shadow.camera.far = 800;
-    spotlight.shadow.mapSize.width = 2048;
-    spotlight.shadow.mapSize.height = 2048;
-    spotlight.shadow.bias = -0.001;
+    // Shadow settings - directly below character
+    mainLight.shadow.camera.near = 100;
+    mainLight.shadow.camera.far = 600;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
+    mainLight.shadow.bias = -0.0001;
     
-    scene.add(spotlight);
-    scene.add(spotlight.target);
+    scene.add(mainLight);
+    scene.add(mainLight.target);
     
-    // Key light from side (softer now)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    keyLight.position.set(200, 300, 200);
-    keyLight.castShadow = true;
-    
-    // Shadow settings for key light
-    keyLight.shadow.camera.left = -300;
-    keyLight.shadow.camera.right = 300;
-    keyLight.shadow.camera.top = 300;
-    keyLight.shadow.camera.bottom = -300;
-    keyLight.shadow.camera.near = 1;
-    keyLight.shadow.camera.far = 1000;
-    keyLight.shadow.mapSize.width = 2048;
-    keyLight.shadow.mapSize.height = 2048;
-    keyLight.shadow.bias = -0.001;
-    scene.add(keyLight);
-
-    // Fill light from opposite side (very soft)
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.2);
-    fillLight.position.set(-150, 100, -100);
+    // Fill light from front for face/body brightness
+    const fillLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    fillLight.position.set(0, 150, 300);
     scene.add(fillLight);
 
-    // Rim light from back (subtle)
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    rimLight.position.set(0, 200, -250);
+    // Subtle rim light from behind
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    rimLight.position.set(0, 200, -200);
     scene.add(rimLight);
 
-    console.log('Lights added with spotlight on avatar');
+    console.log('Simple bright lighting added');
 
     // Load Ready Player Me avatar
     const loader = new GLTFLoader();
@@ -599,112 +582,8 @@ const Avatar = () => {
   }, [animationLoaded]);
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#87CEEB' }}>
+    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-      
-      {isLoading && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'white',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
-        }}>
-          <div>Loading your companion...</div>
-          <div style={{ fontSize: '18px', marginTop: '10px' }}>
-            {loadProgress.toFixed(0)}%
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'white',
-          fontSize: '18px',
-          backgroundColor: 'rgba(255, 0, 0, 0.7)',
-          padding: '20px',
-          borderRadius: '10px',
-          maxWidth: '80%',
-          textAlign: 'center'
-        }}>
-          {error}
-        </div>
-      )}
-
-      {!isLoading && !error && (
-        <>
-          <div style={{
-            position: 'absolute',
-            bottom: '40px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            color: 'white',
-            fontSize: '16px',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            padding: '12px 24px',
-            borderRadius: '25px',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-          }}>
-            {animationLoaded ? '✅ Animation loaded!' : '⚠️ No animation - using default pose'}
-          </div>
-
-          {!animationLoaded && (
-            <div style={{
-              position: 'absolute',
-              top: '20px',
-              left: '20px',
-              color: 'white',
-              fontSize: '14px',
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              padding: '15px',
-              borderRadius: '10px',
-              maxWidth: '300px',
-              lineHeight: '1.5'
-            }}>
-              <strong>Add animations:</strong><br/>
-              1. Go to mixamo.com<br/>
-              2. Download these as FBX, Without Skin:<br/>
-              &nbsp;&nbsp;- Breathing Idle → Idle.fbx<br/>
-              &nbsp;&nbsp;- Jump → Jump.fbx<br/>
-              &nbsp;&nbsp;- Waving → Wave.fbx<br/>
-              &nbsp;&nbsp;- Running → Run.fbx<br/>
-              3. Save to /public/animations/
-            </div>
-          )}
-
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            color: 'white',
-            fontSize: '14px',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-            padding: '15px',
-            borderRadius: '10px',
-            lineHeight: '1.8'
-          }}>
-            <strong>🎮 Controls:</strong><br/>
-            <strong>WASD</strong> - Move camera<br/>
-            <strong>Z/X</strong> - Zoom in/out<br/>
-            <strong>Mouse</strong> - Orbit view<br/>
-            <strong>Scroll</strong> - Zoom<br/>
-            <br/>
-            <strong>🎬 Animations:</strong><br/>
-            <strong>1</strong> - Idle {currentAnimation === 'idle' && '✓'}<br/>
-            <strong>2</strong> - Jump {currentAnimation === 'jump' && '✓'}<br/>
-            <strong>3</strong> - Wave {currentAnimation === 'wave' && '✓'}<br/>
-            <strong>4</strong> - Run {currentAnimation === 'run' && '✓'}
-          </div>
-        </>
-      )}
     </div>
   );
 };
