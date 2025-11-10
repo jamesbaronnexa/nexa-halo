@@ -20,6 +20,17 @@ const Avatar = () => {
   useEffect(() => {
     console.log('Avatar component mounted');
     
+    // Request fullscreen when launched as PWA (standalone mode)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.navigator.standalone || 
+                         document.referrer.includes('android-app://');
+    
+    if (isStandalone && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log('Fullscreen request failed:', err);
+      });
+    }
+    
     if (!containerRef.current) {
       console.error('Container ref not available');
       return;
