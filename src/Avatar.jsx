@@ -11,12 +11,14 @@ const Avatar = () => {
   const mixerRef = useRef(null);
   const animationsRef = useRef({}); // Store multiple animations
   const currentActionRef = useRef(null); // Track current playing action
+  const facialMeshes = useRef([]); // Store meshes with morph targets for facial animation
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadProgress, setLoadProgress] = useState(0);
   const [animationLoaded, setAnimationLoaded] = useState(false);
   const [currentAnimation, setCurrentAnimation] = useState('idle');
   const [showGyroButton, setShowGyroButton] = useState(false);
+  const [showFacialControls, setShowFacialControls] = useState(false);
 
   useEffect(() => {
     console.log('Avatar component mounted');
@@ -230,6 +232,62 @@ const Avatar = () => {
         console.log('Gyroscope error:', err);
       }
     };
+    
+    // Function to test facial expressions
+    window.testExpression = (expressionName) => {
+      console.log(`Testing expression: ${expressionName}`);
+      
+      facialMeshes.current.forEach(mesh => {
+        if (!mesh.morphTargetInfluences || !mesh.morphTargetDictionary) return;
+        
+        // Reset all morphs to 0
+        for (let i = 0; i < mesh.morphTargetInfluences.length; i++) {
+          mesh.morphTargetInfluences[i] = 0;
+        }
+        
+        const dict = mesh.morphTargetDictionary;
+        
+        // Apply expression
+        switch(expressionName) {
+          case 'smile':
+            if (dict['mouthSmileLeft'] !== undefined) mesh.morphTargetInfluences[dict['mouthSmileLeft']] = 0.8;
+            if (dict['mouthSmileRight'] !== undefined) mesh.morphTargetInfluences[dict['mouthSmileRight']] = 0.8;
+            if (dict['cheekSquintLeft'] !== undefined) mesh.morphTargetInfluences[dict['cheekSquintLeft']] = 0.5;
+            if (dict['cheekSquintRight'] !== undefined) mesh.morphTargetInfluences[dict['cheekSquintRight']] = 0.5;
+            break;
+            
+          case 'frown':
+            if (dict['mouthFrownLeft'] !== undefined) mesh.morphTargetInfluences[dict['mouthFrownLeft']] = 0.7;
+            if (dict['mouthFrownRight'] !== undefined) mesh.morphTargetInfluences[dict['mouthFrownRight']] = 0.7;
+            if (dict['browDownLeft'] !== undefined) mesh.morphTargetInfluences[dict['browDownLeft']] = 0.5;
+            if (dict['browDownRight'] !== undefined) mesh.morphTargetInfluences[dict['browDownRight']] = 0.5;
+            break;
+            
+          case 'surprise':
+            if (dict['jawOpen'] !== undefined) mesh.morphTargetInfluences[dict['jawOpen']] = 0.5;
+            if (dict['browInnerUp'] !== undefined) mesh.morphTargetInfluences[dict['browInnerUp']] = 0.8;
+            if (dict['browOuterUpLeft'] !== undefined) mesh.morphTargetInfluences[dict['browOuterUpLeft']] = 0.8;
+            if (dict['browOuterUpRight'] !== undefined) mesh.morphTargetInfluences[dict['browOuterUpRight']] = 0.8;
+            if (dict['eyeWideLeft'] !== undefined) mesh.morphTargetInfluences[dict['eyeWideLeft']] = 0.8;
+            if (dict['eyeWideRight'] !== undefined) mesh.morphTargetInfluences[dict['eyeWideRight']] = 0.8;
+            break;
+            
+          case 'blink':
+            if (dict['eyeBlinkLeft'] !== undefined) mesh.morphTargetInfluences[dict['eyeBlinkLeft']] = 1.0;
+            if (dict['eyeBlinkRight'] !== undefined) mesh.morphTargetInfluences[dict['eyeBlinkRight']] = 1.0;
+            break;
+            
+          case 'kiss':
+            if (dict['mouthPucker'] !== undefined) mesh.morphTargetInfluences[dict['mouthPucker']] = 0.8;
+            if (dict['mouthFunnel'] !== undefined) mesh.morphTargetInfluences[dict['mouthFunnel']] = 0.4;
+            break;
+            
+          case 'neutral':
+            // Already reset to 0
+            break;
+        }
+      });
+    };
 
     // Function to switch animations with smooth transition
     const switchAnimation = (animName) => {
@@ -248,10 +306,10 @@ const Avatar = () => {
 
       // Set animation speed and loop based on type - ALL at 0.5x speed
       if (animName === 'idle') {
-        newAction.timeScale = 0.5;
+        newAction.timeScale = 0.3; // Slower, more calm (was 0.5)
         newAction.setLoop(THREE.LoopRepeat);
         newAction.clampWhenFinished = false;
-        console.log('🎬 Idle: Looping at 0.5x speed');
+        console.log('🎬 Idle: Looping at 0.3x speed');
         
       } else if (animName === 'jump') {
         newAction.timeScale = 0.5;
@@ -307,6 +365,9 @@ const Avatar = () => {
       if (key === '2') switchAnimation('jump');
       if (key === '3') switchAnimation('wave');
       if (key === '4') switchAnimation('run');
+      
+      // F key for facial controls
+      if (key === 'f') setShowFacialControls(prev => !prev);
     };
 
     const handleKeyUp = (e) => {
@@ -359,7 +420,7 @@ const Avatar = () => {
     const loader = new GLTFLoader();
     
     // Use your avatar URL here - replace with your own!
-    const avatarUrl = 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb';
+    const avatarUrl = 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb?morphTargets=ARKit,Oculus+Visemes';
     
     console.log('Starting avatar load from:', avatarUrl);
     
@@ -419,6 +480,8 @@ const Avatar = () => {
           if (child.isMesh && child.morphTargetDictionary) {
             console.log('Found mesh with morph targets:', child.name);
             console.log('Available morph targets:', Object.keys(child.morphTargetDictionary));
+            // Store meshes with facial morph targets
+            facialMeshes.current.push(child);
           }
         });
 
@@ -628,6 +691,49 @@ const Avatar = () => {
         avatarRef.current.rotation.x = Math.sin(time * 0.7) * 0.01;
       }
 
+      // Facial animation with ARKit blend shapes - always active
+      if (facialMeshes.current.length > 0) {
+        const time = clock.getElapsedTime();
+        
+        facialMeshes.current.forEach(mesh => {
+          if (!mesh.morphTargetInfluences || !mesh.morphTargetDictionary) return;
+          
+          // BLINKING - realistic blink every 3-5 seconds
+          const blinkCycle = time % 4; // 4 second cycle
+          let blinkAmount = 0;
+          if (blinkCycle > 3.5) { // Blink in last 0.5 seconds
+            const blinkPhase = (blinkCycle - 3.5) * 4; // 0 to 2
+            blinkAmount = blinkPhase < 1 ? blinkPhase : 2 - blinkPhase; // Triangle wave
+          }
+          
+          const eyeBlinkLeftIndex = mesh.morphTargetDictionary['eyeBlinkLeft'];
+          const eyeBlinkRightIndex = mesh.morphTargetDictionary['eyeBlinkRight'];
+          if (eyeBlinkLeftIndex !== undefined) mesh.morphTargetInfluences[eyeBlinkLeftIndex] = blinkAmount;
+          if (eyeBlinkRightIndex !== undefined) mesh.morphTargetInfluences[eyeBlinkRightIndex] = blinkAmount;
+          
+          // BREATHING - subtle jaw and mouth movement
+          const breathCycle = Math.sin(time * 2) * 0.5 + 0.5; // 0 to 1
+          const jawOpenIndex = mesh.morphTargetDictionary['jawOpen'];
+          if (jawOpenIndex !== undefined) {
+            mesh.morphTargetInfluences[jawOpenIndex] = breathCycle * 0.05; // Very subtle
+          }
+          
+          // RANDOM EXPRESSIONS - smile occasionally
+          const expressionCycle = Math.sin(time * 0.2) * 0.5 + 0.5; // Slow cycle
+          const mouthSmileLeftIndex = mesh.morphTargetDictionary['mouthSmileLeft'];
+          const mouthSmileRightIndex = mesh.morphTargetDictionary['mouthSmileRight'];
+          
+          if (expressionCycle > 0.85) { // Smile 15% of the time
+            const smileAmount = (expressionCycle - 0.85) * 3.33; // 0 to 0.5
+            if (mouthSmileLeftIndex !== undefined) mesh.morphTargetInfluences[mouthSmileLeftIndex] = smileAmount * 0.4;
+            if (mouthSmileRightIndex !== undefined) mesh.morphTargetInfluences[mouthSmileRightIndex] = smileAmount * 0.4;
+          } else {
+            if (mouthSmileLeftIndex !== undefined) mesh.morphTargetInfluences[mouthSmileLeftIndex] = 0;
+            if (mouthSmileRightIndex !== undefined) mesh.morphTargetInfluences[mouthSmileRightIndex] = 0;
+          }
+        });
+      }
+
       renderer.render(scene, camera);
     };
     animate();
@@ -684,8 +790,75 @@ const Avatar = () => {
           📱 Enable Tilt Controls
         </button>
       )}
+      
+      {/* Facial Controls Panel */}
+      {showFacialControls && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          color: 'white',
+          padding: '20px',
+          borderRadius: '10px',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          minWidth: '300px',
+          zIndex: 1000,
+          fontFamily: 'monospace',
+          fontSize: '12px'
+        }}>
+          <h3 style={{ margin: '0 0 15px 0' }}>🎭 ARKit Face Controls</h3>
+          <p style={{ margin: '0 0 10px 0', fontSize: '11px', opacity: 0.7 }}>
+            Press F to toggle • Test facial expressions
+          </p>
+          
+          {/* Common expressions quick buttons */}
+          <div style={{ marginBottom: '15px' }}>
+            <button onClick={() => testExpression('smile')} style={buttonStyle}>😊 Smile</button>
+            <button onClick={() => testExpression('frown')} style={buttonStyle}>☹️ Frown</button>
+            <button onClick={() => testExpression('surprise')} style={buttonStyle}>😮 Surprise</button>
+            <button onClick={() => testExpression('blink')} style={buttonStyle}>😑 Blink</button>
+            <button onClick={() => testExpression('kiss')} style={buttonStyle}>😘 Kiss</button>
+            <button onClick={() => testExpression('neutral')} style={buttonStyle}>😐 Neutral</button>
+          </div>
+          
+          <div style={{ fontSize: '10px', opacity: 0.5 }}>
+            Available ARKit morphs: {facialMeshes.current[0]?.morphTargetDictionary ? 
+              Object.keys(facialMeshes.current[0].morphTargetDictionary).length : 0}
+          </div>
+        </div>
+      )}
+      
+      {/* Hint to press F */}
+      {!showFacialControls && (
+        <div style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          color: 'white',
+          padding: '10px 15px',
+          borderRadius: '8px',
+          fontSize: '12px',
+          zIndex: 1000
+        }}>
+          Press <strong>F</strong> for facial controls
+        </div>
+      )}
     </div>
   );
+};
+
+const buttonStyle = {
+  margin: '5px',
+  padding: '8px 12px',
+  backgroundColor: '#333',
+  color: 'white',
+  border: '1px solid #555',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontSize: '11px'
 };
 
 export default Avatar;
