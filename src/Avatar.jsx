@@ -139,14 +139,15 @@ const Avatar = () => {
       z: false, x: false
     };
 
-    // Gyroscope controls for mobile
+    // Gyroscope controls for mobile - smooth orbital rotation
     let gyroEnabled = false;
-    const gyroSensitivity = 0.02; // Lower for smooth rotation
-    const smoothing = 0.1; // Smooth interpolation
-    let targetRotationX = 0;
-    let targetRotationY = 0;
-    let currentRotationX = 0;
-    let currentRotationY = 0;
+    let gyroInitialized = false;
+    let baseGamma = 0;
+    let baseBeta = 0;
+    let currentOrbitAngle = 0; // Current horizontal orbit angle
+    let currentVerticalAngle = 0; // Current vertical angle
+    const rotationSpeed = 2.0; // Higher sensitivity
+    const maxRotation = Math.PI / 6; // Limit rotation to 30 degrees each way
 
     // Check if we need to show permission button
     const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && 
@@ -157,36 +158,46 @@ const Avatar = () => {
       setShowGyroButton(true);
     }
 
-    // Handle device orientation - smooth orbital rotation
+    // Store initial camera angle
+    const initialCameraAngle = Math.atan2(
+      camera.position.x - controls.target.x,
+      camera.position.z - controls.target.z
+    );
+    const initialDistance = camera.position.distanceTo(controls.target);
+    const initialHeight = camera.position.y;
+
+    // Handle device orientation - calculate rotation delta smoothly
     const handleOrientation = (event) => {
       if (!gyroEnabled || !event.beta || !event.gamma) return;
 
-      const beta = event.beta;   // Tilt forward/back
-      const gamma = event.gamma;  // Tilt left/right
+      // Initialize baseline on first read
+      if (!gyroInitialized) {
+        baseGamma = event.gamma;
+        baseBeta = event.beta;
+        gyroInitialized = true;
+        return;
+      }
 
-      // Convert tilt to target rotation angles (in radians)
-      targetRotationY = (gamma / 90) * Math.PI * gyroSensitivity * 10; // Horizontal orbit
-      targetRotationX = ((beta - 90) / 90) * Math.PI * gyroSensitivity * 5; // Vertical orbit
+      // Calculate delta from baseline
+      const deltaGamma = (event.gamma - baseGamma) * (Math.PI / 180) * rotationSpeed;
+      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.5;
+
+      // Clamp to max rotation
+      currentOrbitAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaGamma));
+      currentVerticalAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaBeta));
     };
 
-    // Apply smooth gyro rotation in animation loop
+    // Apply rotation every frame (60fps)
     const applyGyroRotation = () => {
-      if (!gyroEnabled) return;
+      if (!gyroEnabled || !gyroInitialized) return;
 
-      // Smooth interpolation
-      currentRotationX += (targetRotationX - currentRotationX) * smoothing;
-      currentRotationY += (targetRotationY - currentRotationY) * smoothing;
-
-      // Get distance from camera to target
-      const distance = camera.position.distanceTo(controls.target);
+      // Calculate new camera position by rotating around target
+      const targetPos = controls.target;
+      const newAngle = initialCameraAngle + currentOrbitAngle;
       
-      // Calculate new camera position orbiting around target
-      const targetPos = controls.target.clone();
-      
-      // Apply rotations to orbit around character
-      camera.position.x = targetPos.x + distance * Math.sin(currentRotationY) * Math.cos(currentRotationX);
-      camera.position.z = targetPos.z + distance * Math.cos(currentRotationY) * Math.cos(currentRotationX);
-      camera.position.y = targetPos.y + distance * Math.sin(currentRotationX);
+      camera.position.x = targetPos.x + initialDistance * Math.sin(newAngle);
+      camera.position.z = targetPos.z + initialDistance * Math.cos(newAngle);
+      camera.position.y = initialHeight + currentVerticalAngle * 50; // Subtle vertical movement
       
       camera.lookAt(targetPos);
     };
