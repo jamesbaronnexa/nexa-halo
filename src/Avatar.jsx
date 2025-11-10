@@ -596,19 +596,18 @@ const Avatar = () => {
       // Apply smooth gyroscope rotation
       applyGyroRotation();
         
-        // Debug: Log camera position every second
-        const now = Date.now();
-        if (!window.lastCamLog) window.lastCamLog = 0;
-        if (now - window.lastCamLog > 1000) {
-          console.log('========================================');
-          console.log('📹 CAMERA:');
-          console.log('Position:', camera.position);
-          console.log('Target:', controls.target);
-          console.log('Direction:', camera.getWorldDirection(new THREE.Vector3()));
-          console.log('========================================');
-          
-          window.lastCamLog = now;
-        }
+      // Debug: Log camera position every second
+      const now = Date.now();
+      if (!window.lastCamLog) window.lastCamLog = 0;
+      if (now - window.lastCamLog > 1000) {
+        console.log('========================================');
+        console.log('📹 CAMERA:');
+        console.log('Position:', camera.position);
+        console.log('Target:', controls.target);
+        console.log('Direction:', camera.getWorldDirection(new THREE.Vector3()));
+        console.log('========================================');
+        
+        window.lastCamLog = now;
       }
 
       // Add subtle idle animation if no animation loaded
