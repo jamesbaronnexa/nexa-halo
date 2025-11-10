@@ -144,10 +144,13 @@ const Avatar = () => {
     let gyroInitialized = false;
     let baseGamma = 0;
     let baseBeta = 0;
-    let currentOrbitAngle = 0; // Current horizontal orbit angle
-    let currentVerticalAngle = 0; // Current vertical angle
-    const rotationSpeed = 2.0; // Higher sensitivity
-    const maxRotation = Math.PI / 6; // Limit rotation to 30 degrees each way
+    let targetOrbitAngle = 0; // Target horizontal orbit angle
+    let targetVerticalAngle = 0; // Target vertical angle
+    let currentOrbitAngle = 0; // Smoothed current horizontal orbit
+    let currentVerticalAngle = 0; // Smoothed current vertical
+    const rotationSpeed = 0.8; // Lower sensitivity (was 2.0)
+    const smoothing = 0.05; // Smooth interpolation (lower = smoother)
+    const maxRotation = Math.PI / 8; // Limit rotation to 22.5 degrees each way (was 30)
 
     // Check if we need to show permission button
     const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && 
@@ -180,16 +183,20 @@ const Avatar = () => {
 
       // Calculate delta from baseline
       const deltaGamma = (event.gamma - baseGamma) * (Math.PI / 180) * rotationSpeed;
-      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.5;
+      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.3;
 
-      // Clamp to max rotation
-      currentOrbitAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaGamma));
-      currentVerticalAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaBeta));
+      // Set target angles (clamped to max rotation)
+      targetOrbitAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaGamma));
+      targetVerticalAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaBeta));
     };
 
-    // Apply rotation every frame (60fps)
+    // Apply rotation every frame (60fps) with smooth interpolation
     const applyGyroRotation = () => {
       if (!gyroEnabled || !gyroInitialized) return;
+
+      // Smooth interpolation towards target angles
+      currentOrbitAngle += (targetOrbitAngle - currentOrbitAngle) * smoothing;
+      currentVerticalAngle += (targetVerticalAngle - currentVerticalAngle) * smoothing;
 
       // Calculate new camera position by rotating around target
       const targetPos = controls.target;
@@ -197,7 +204,7 @@ const Avatar = () => {
       
       camera.position.x = targetPos.x + initialDistance * Math.sin(newAngle);
       camera.position.z = targetPos.z + initialDistance * Math.cos(newAngle);
-      camera.position.y = initialHeight + currentVerticalAngle * 50; // Subtle vertical movement
+      camera.position.y = initialHeight + currentVerticalAngle * 30; // Subtle vertical movement (reduced from 50)
       
       camera.lookAt(targetPos);
     };
