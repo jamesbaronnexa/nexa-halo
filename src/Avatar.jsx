@@ -182,8 +182,8 @@ const Avatar = () => {
       }
 
       // Calculate delta from baseline
-      const deltaGamma = (event.gamma - baseGamma) * (Math.PI / 180) * rotationSpeed * 0.7; // Reduced horizontal (was 1.0)
-      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.5; // Increased vertical (was 0.3)
+      const deltaGamma = (event.gamma - baseGamma) * (Math.PI / 180) * rotationSpeed * -0.5; // Reversed and reduced horizontal
+      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.8; // Increased vertical
 
       // Set target angles (clamped to max rotation)
       targetOrbitAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaGamma));
