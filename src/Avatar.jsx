@@ -108,7 +108,7 @@ const Avatar = () => {
       0.1,
       50000
     );
-    camera.position.set(-1.694071047971759, 178.23411671672875, 69.67656249866172);
+    camera.position.set(-1.694071047971759, 178.23411671672875, 85); // Pulled back from 69.68 to 85
     console.log('Camera position:', camera.position);
 
     // Renderer setup
@@ -137,6 +137,50 @@ const Avatar = () => {
       w: false, a: false, s: false, d: false,
       z: false, x: false
     };
+
+    // Gyroscope controls for mobile
+    let gyroEnabled = false;
+    const gyroSensitivity = 0.3; // How much the camera moves
+    const initialCameraPos = camera.position.clone();
+    const initialTarget = controls.target.clone();
+
+    // Request device orientation permission (iOS 13+)
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(response => {
+          if (response === 'granted') {
+            gyroEnabled = true;
+            console.log('✅ Gyroscope enabled');
+          }
+        })
+        .catch(err => console.log('Gyroscope permission denied:', err));
+    } else if ('DeviceOrientationEvent' in window) {
+      gyroEnabled = true;
+      console.log('✅ Gyroscope enabled (no permission needed)');
+    }
+
+    // Handle device orientation
+    const handleOrientation = (event) => {
+      if (!gyroEnabled || !event.beta || !event.gamma) return;
+
+      // beta: front-to-back tilt (portrait: -180 to 180)
+      // gamma: left-to-right tilt (portrait: -90 to 90)
+      const beta = event.beta;   // Up/down tilt
+      const gamma = event.gamma;  // Left/right tilt
+
+      // Subtle camera movement based on phone tilt
+      const offsetX = (gamma / 90) * 10 * gyroSensitivity;
+      const offsetY = ((beta - 90) / 90) * 10 * gyroSensitivity; // Adjust for portrait
+
+      camera.position.x = initialCameraPos.x + offsetX;
+      camera.position.y = initialCameraPos.y + offsetY;
+
+      // Slightly adjust target for parallax effect
+      controls.target.x = initialTarget.x + offsetX * 0.3;
+      controls.target.y = initialTarget.y + offsetY * 0.3;
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation);
 
     // Function to switch animations with smooth transition
     const switchAnimation = (animName) => {
@@ -551,6 +595,7 @@ const Avatar = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('deviceorientation', handleOrientation);
       if (containerRef.current && renderer.domElement) {
         containerRef.current.removeChild(renderer.domElement);
       }
