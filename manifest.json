@@ -3,7 +3,7 @@
   "short_name": "Nexa",
   "description": "Your AI companion avatar",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#f0f0f0",
   "theme_color": "#000000",
   "orientation": "portrait",
