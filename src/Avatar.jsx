@@ -16,6 +16,7 @@ const Avatar = () => {
   const [loadProgress, setLoadProgress] = useState(0);
   const [animationLoaded, setAnimationLoaded] = useState(false);
   const [currentAnimation, setCurrentAnimation] = useState('idle');
+  const [showGyroButton, setShowGyroButton] = useState(false);
 
   useEffect(() => {
     console.log('Avatar component mounted');
@@ -140,47 +141,58 @@ const Avatar = () => {
 
     // Gyroscope controls for mobile
     let gyroEnabled = false;
-    const gyroSensitivity = 0.3; // How much the camera moves
+    const gyroSensitivity = 0.3;
     const initialCameraPos = camera.position.clone();
     const initialTarget = controls.target.clone();
 
-    // Request device orientation permission (iOS 13+)
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission()
-        .then(response => {
-          if (response === 'granted') {
-            gyroEnabled = true;
-            console.log('✅ Gyroscope enabled');
-          }
-        })
-        .catch(err => console.log('Gyroscope permission denied:', err));
-    } else if ('DeviceOrientationEvent' in window) {
-      gyroEnabled = true;
-      console.log('✅ Gyroscope enabled (no permission needed)');
+    // Check if we need to show permission button (iOS 13+ or any mobile device)
+    const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && 
+                           typeof DeviceOrientationEvent.requestPermission === 'function';
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (needsPermission || isMobile) {
+      setShowGyroButton(true);
     }
 
     // Handle device orientation
     const handleOrientation = (event) => {
       if (!gyroEnabled || !event.beta || !event.gamma) return;
 
-      // beta: front-to-back tilt (portrait: -180 to 180)
-      // gamma: left-to-right tilt (portrait: -90 to 90)
-      const beta = event.beta;   // Up/down tilt
-      const gamma = event.gamma;  // Left/right tilt
+      const beta = event.beta;
+      const gamma = event.gamma;
 
-      // Subtle camera movement based on phone tilt
+      // Subtle camera movement
       const offsetX = (gamma / 90) * 10 * gyroSensitivity;
-      const offsetY = ((beta - 90) / 90) * 10 * gyroSensitivity; // Adjust for portrait
+      const offsetY = ((beta - 90) / 90) * 10 * gyroSensitivity;
 
       camera.position.x = initialCameraPos.x + offsetX;
       camera.position.y = initialCameraPos.y + offsetY;
 
-      // Slightly adjust target for parallax effect
       controls.target.x = initialTarget.x + offsetX * 0.3;
       controls.target.y = initialTarget.y + offsetY * 0.3;
     };
 
-    window.addEventListener('deviceorientation', handleOrientation);
+    // Function to enable gyroscope (called from button)
+    window.enableGyroscope = async () => {
+      try {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === 'granted') {
+            gyroEnabled = true;
+            window.addEventListener('deviceorientation', handleOrientation);
+            setShowGyroButton(false);
+            console.log('✅ Gyroscope enabled');
+          }
+        } else {
+          gyroEnabled = true;
+          window.addEventListener('deviceorientation', handleOrientation);
+          setShowGyroButton(false);
+          console.log('✅ Gyroscope enabled');
+        }
+      } catch (err) {
+        console.log('Gyroscope error:', err);
+      }
+    };
 
     // Function to switch animations with smooth transition
     const switchAnimation = (animName) => {
@@ -607,6 +619,31 @@ const Avatar = () => {
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      
+      {/* Gyroscope Enable Button */}
+      {showGyroButton && (
+        <button
+          onClick={() => window.enableGyroscope()}
+          style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '15px 30px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            border: '2px solid rgba(255, 255, 255, 0.5)',
+            borderRadius: '25px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            zIndex: 1000,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+          }}
+        >
+          📱 Enable Tilt Controls
+        </button>
+      )}
     </div>
   );
 };
