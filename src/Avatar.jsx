@@ -97,7 +97,7 @@ const Avatar = () => {
       0.1,
       50000
     );
-    camera.position.set(-7.763699823376374, 213.97766032792086, 104.43149740853539);
+    camera.position.set(-1.694071047971759, 178.23411671672875, 69.67656249866172);
     console.log('Camera position:', camera.position);
 
     // Renderer setup
@@ -115,7 +115,7 @@ const Avatar = () => {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.target.set(3.741352159734067, 132.31067081206825, -21.422282966573185); // Match camera view
+    controls.target.set(-0.8043839982263982, 133.96109518317945, -22.220958948198632);
     controls.minDistance = 10;
     controls.maxDistance = 1000;
     controls.maxPolarAngle = Math.PI / 2;
@@ -495,51 +495,18 @@ const Avatar = () => {
       if (mixerRef.current) {
         mixerRef.current.update(delta);
         
-        // Debug: Log positions every second
+        // Debug: Log camera position every second
         const now = Date.now();
-        if (!window.lastPosLog) window.lastPosLog = 0;
-        if (now - window.lastPosLog > 1000 && avatarRef.current) {
-          let hipsX = null, hipsY = null, hipsZ = null;
-          let leftFootX = null, leftFootY = null, leftFootZ = null;
-          let rightFootX = null, rightFootY = null, rightFootZ = null;
-          
-          avatarRef.current.traverse((child) => {
-            if (child.isBone) {
-              const worldPos = new THREE.Vector3();
-              child.getWorldPosition(worldPos);
-              
-              if (child.name === 'Hips') {
-                hipsX = worldPos.x;
-                hipsY = worldPos.y;
-                hipsZ = worldPos.z;
-              }
-              if (child.name === 'LeftFoot') {
-                leftFootX = worldPos.x;
-                leftFootY = worldPos.y;
-                leftFootZ = worldPos.z;
-              }
-              if (child.name === 'RightFoot') {
-                rightFootX = worldPos.x;
-                rightFootY = worldPos.y;
-                rightFootZ = worldPos.z;
-              }
-            }
-          });
-          
+        if (!window.lastCamLog) window.lastCamLog = 0;
+        if (now - window.lastCamLog > 1000) {
           console.log('========================================');
           console.log('📹 CAMERA:');
           console.log('Position:', camera.position);
           console.log('Target:', controls.target);
           console.log('Direction:', camera.getWorldDirection(new THREE.Vector3()));
-          console.log('');
-          console.log('👤 AVATAR:');
-          console.log('🦴 Hips - X:', hipsX?.toFixed(3), 'Y:', hipsY?.toFixed(3), 'Z:', hipsZ?.toFixed(3));
-          console.log('🦶 LeftFoot - X:', leftFootX?.toFixed(3), 'Y:', leftFootY?.toFixed(3), 'Z:', leftFootZ?.toFixed(3));
-          console.log('🦶 RightFoot - X:', rightFootX?.toFixed(3), 'Y:', rightFootY?.toFixed(3), 'Z:', rightFootZ?.toFixed(3));
-          console.log('📍 Avatar root - X:', avatarRef.current.position.x.toFixed(3), 'Y:', avatarRef.current.position.y.toFixed(3), 'Z:', avatarRef.current.position.z.toFixed(3));
           console.log('========================================');
           
-          window.lastPosLog = now;
+          window.lastCamLog = now;
         }
       }
 
