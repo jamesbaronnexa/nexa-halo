@@ -1,19 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nexa" />
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    
     <title>Nexa Halo - Your AI Companion</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      }
-    </style>
+    <meta name="description" content="Your AI companion avatar" />
   </head>
-  <body>
+  <body style="margin: 0; padding: 0; overflow: hidden;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
