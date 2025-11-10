@@ -150,7 +150,7 @@ const Avatar = () => {
     let currentVerticalAngle = 0; // Smoothed current vertical
     const rotationSpeed = 0.8; // Lower sensitivity (was 2.0)
     const smoothing = 0.05; // Smooth interpolation (lower = smoother)
-    const maxRotation = Math.PI / 8; // Limit rotation to 22.5 degrees each way (was 30)
+    const maxRotation = Math.PI / 18; // Limit rotation to 10 degrees each way
 
     // Check if we need to show permission button
     const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && 
@@ -182,8 +182,8 @@ const Avatar = () => {
       }
 
       // Calculate delta from baseline
-      const deltaGamma = (event.gamma - baseGamma) * (Math.PI / 180) * rotationSpeed;
-      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.3;
+      const deltaGamma = (event.gamma - baseGamma) * (Math.PI / 180) * rotationSpeed * 0.7; // Reduced horizontal (was 1.0)
+      const deltaBeta = (event.beta - baseBeta) * (Math.PI / 180) * rotationSpeed * 0.5; // Increased vertical (was 0.3)
 
       // Set target angles (clamped to max rotation)
       targetOrbitAngle = Math.max(-maxRotation, Math.min(maxRotation, deltaGamma));
