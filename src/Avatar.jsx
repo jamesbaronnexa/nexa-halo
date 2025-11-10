@@ -141,11 +141,14 @@ const Avatar = () => {
 
     // Gyroscope controls for mobile
     let gyroEnabled = false;
-    const gyroSensitivity = 0.3;
-    const initialCameraPos = camera.position.clone();
-    const initialTarget = controls.target.clone();
+    const gyroSensitivity = 0.02; // Lower for smooth rotation
+    const smoothing = 0.1; // Smooth interpolation
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+    let currentRotationX = 0;
+    let currentRotationY = 0;
 
-    // Check if we need to show permission button (iOS 13+ or any mobile device)
+    // Check if we need to show permission button
     const needsPermission = typeof DeviceOrientationEvent !== 'undefined' && 
                            typeof DeviceOrientationEvent.requestPermission === 'function';
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -154,25 +157,41 @@ const Avatar = () => {
       setShowGyroButton(true);
     }
 
-    // Handle device orientation
+    // Handle device orientation - smooth orbital rotation
     const handleOrientation = (event) => {
       if (!gyroEnabled || !event.beta || !event.gamma) return;
 
-      const beta = event.beta;
-      const gamma = event.gamma;
+      const beta = event.beta;   // Tilt forward/back
+      const gamma = event.gamma;  // Tilt left/right
 
-      // Subtle camera movement
-      const offsetX = (gamma / 90) * 10 * gyroSensitivity;
-      const offsetY = ((beta - 90) / 90) * 10 * gyroSensitivity;
-
-      camera.position.x = initialCameraPos.x + offsetX;
-      camera.position.y = initialCameraPos.y + offsetY;
-
-      controls.target.x = initialTarget.x + offsetX * 0.3;
-      controls.target.y = initialTarget.y + offsetY * 0.3;
+      // Convert tilt to target rotation angles (in radians)
+      targetRotationY = (gamma / 90) * Math.PI * gyroSensitivity * 10; // Horizontal orbit
+      targetRotationX = ((beta - 90) / 90) * Math.PI * gyroSensitivity * 5; // Vertical orbit
     };
 
-    // Function to enable gyroscope (called from button)
+    // Apply smooth gyro rotation in animation loop
+    const applyGyroRotation = () => {
+      if (!gyroEnabled) return;
+
+      // Smooth interpolation
+      currentRotationX += (targetRotationX - currentRotationX) * smoothing;
+      currentRotationY += (targetRotationY - currentRotationY) * smoothing;
+
+      // Get distance from camera to target
+      const distance = camera.position.distanceTo(controls.target);
+      
+      // Calculate new camera position orbiting around target
+      const targetPos = controls.target.clone();
+      
+      // Apply rotations to orbit around character
+      camera.position.x = targetPos.x + distance * Math.sin(currentRotationY) * Math.cos(currentRotationX);
+      camera.position.z = targetPos.z + distance * Math.cos(currentRotationY) * Math.cos(currentRotationX);
+      camera.position.y = targetPos.y + distance * Math.sin(currentRotationX);
+      
+      camera.lookAt(targetPos);
+    };
+
+    // Function to enable gyroscope
     window.enableGyroscope = async () => {
       try {
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -181,13 +200,13 @@ const Avatar = () => {
             gyroEnabled = true;
             window.addEventListener('deviceorientation', handleOrientation);
             setShowGyroButton(false);
-            console.log('✅ Gyroscope enabled');
+            console.log('✅ Gyroscope enabled - smooth rotation');
           }
         } else {
           gyroEnabled = true;
           window.addEventListener('deviceorientation', handleOrientation);
           setShowGyroButton(false);
-          console.log('✅ Gyroscope enabled');
+          console.log('✅ Gyroscope enabled - smooth rotation');
         }
       } catch (err) {
         console.log('Gyroscope error:', err);
@@ -561,6 +580,10 @@ const Avatar = () => {
       // Update animation mixer (for Mixamo animations)
       if (mixerRef.current) {
         mixerRef.current.update(delta);
+      }
+      
+      // Apply smooth gyroscope rotation
+      applyGyroRotation();
         
         // Debug: Log camera position every second
         const now = Date.now();
